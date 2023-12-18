@@ -5,7 +5,7 @@ from flask import Flask, jsonify, request, render_template
 import sys
 import requests
 
-es = Elasticsearch(host='es')
+es = Elasticsearch("http://172.20.0.2:9200")
 
 app = Flask(__name__)
 
@@ -16,7 +16,8 @@ def load_data_in_es():
     data = r.json()
     print("Loading data in elasticsearch ...")
     for id, truck in enumerate(data):
-        res = es.index(index="sfdata", doc_type="truck", id=id, body=truck)
+        #res = es.index(index="sfdata", doc_type="truck", id=id, body=truck)
+        res = es.index(index="sfdata", id=id, document=truck)
     print("Total trucks loaded: ", len(data))
 
 def safe_check_index(index, retry=3):
@@ -25,12 +26,21 @@ def safe_check_index(index, retry=3):
         print("Out of retries. Bailing out...")
         sys.exit(1)
     try:
-        status = es.indices.exists(index)
+        # status = es.indices.exists(index)
+        resp = es.search(index=index, query={"match_all": {}})
+
+        # if the <index> found will return True        
+        status = True
         return status
     except exceptions.ConnectionError as e:
         print("Unable to connect to ES. Retrying in 5 secs...")
         time.sleep(5)
         safe_check_index(index, retry-1)
+    except exceptions.NotFoundError as e:
+        print(e)
+
+        # if the <index> not found will return False
+        return False
 
 def format_fooditems(string):
     items = [x.strip().lower() for x in string.split(":")]
