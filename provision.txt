@@ -1,0 +1,67 @@
+# Build
+docker build -t hutomosugianto/foodtrucks-web .
+
+# Run elasticsearch
+docker-compose up
+
+# Check the docker container IP 
+docker network ls
+docker network inspect fmt-elasticsearch_default
+
+# Run from console
+docker run -it --rm hutomosugianto/foodtrucks-web bash
+
+# Attach network
+docker run -it --rm --net fmt-elasticsearch_default hutomosugianto/foodtrucks-web bash
+curl 172.20.0.1:9200
+
+# Try running
+docker run --rm --net fmt-elasticsearch_default hutomosugianto/foodtrucks-web
+
+# Docker build
+docker build -t hutomosugianto/foodtrucks-web .
+
+# Docker run
+docker run --net fmt-elasticsearch_default hutomosugianto/foodtrucks-web
+
+curl -X GET "localhost:9200/?pretty"
+curl -X GET "localhost:9200/sfdata/_search?pretty"
+
+
+# Run command from docker run bash
+curl <CONTAINER_IP>:9200
+curl 172.20.0.2:9200
+
+# Curl from Container
+curl http://host.docker.internal:9200
+
+# Reference
+https://docs.docker.com/desktop/networking/#use-cases-and-workarounds
+
+
+python
+
+from elasticsearch import Elasticsearch, exceptions
+es = Elasticsearch("http://172.20.0.2:9200")
+
+def safe_check_index(index, retry=3):
+    """ connect to ES with retry """
+    if not retry:
+        print("Out of retries. Bailing out...")
+        sys.exit(1)
+    try:
+        # status = es.indices.exists(index)
+        resp = es.search(index=index, query={"match_all": {}})
+
+        # if the <index> found will return True        
+        status = True
+        return status
+    except exceptions.ConnectionError as e:
+        print("Unable to connect to ES. Retrying in 5 secs...")
+        time.sleep(5)
+        safe_check_index(index, retry-1)
+    except exceptions.NotFoundError as e:
+        print(e)
+
+        # if the <index> not found will return False
+        return False
